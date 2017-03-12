@@ -1,0 +1,164 @@
+---
+title: "Determinant Importance"
+author: "Rik Crutzen, Gjalt-Jorn Ygram Peters & Judith Noijen"
+date: "`r format(Sys.time(), '%Y-%m-%d at %X');`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE);
+
+basePath <- 'B:/Data/research/party panel/15.1';
+dataPath <- file.path(basePath, 'data');
+dataFileName <- 'survey_652829_R_data_file.csv';
+dataLoadScriptName <- 'survey_652829_R_syntax_file.R';
+scriptPath <- file.path(basePath, 'results - analysis scripts');
+outputPath <- file.path(basePath, 'results - final output');
+workingPath <- file.path(basePath, 'results - intermediate output');
+
+require('userfriendlyscience');
+require('grid');
+require('data.tree');
+require('pander');
+
+```
+
+```{r preparation}
+
+### Import data from LimeSurvey data file
+dat <- importLimeSurveyData(datafile = file.path(dataPath, dataFileName),
+                            scriptfile = file.path(dataPath, dataLoadScriptName),
+                            categoricalQuestions = c('informedConsent',
+                                                     'gender',
+                                                     'hasJob',
+                                                     'currentEducation',
+                                                     'prevEducation',
+                                                     'country'));
+
+### Rename one inconsistently named variable
+names(dat)[names(dat) == 'highDose_AttBeliefs_intensity'] <- 'highDose_AttBeliefs_intens';
+
+### Create a set of three regular expressions to add
+### underscores behind the behaviors
+varnameRegExPairs <- lapply('highDose', function(curBehav) {
+  return(c(paste0("^", curBehav, "(.+)"),
+           paste0(curBehav, "_\\1")));
+});
+
+### Process the variables labels (subquestions, anchors etc)
+dat.labelDf <- processLSvarLabels(dat, varnameRegExPairs = varnameRegExPairs);
+
+### Replace variable names with the versions with the
+### inserted underscores
+names(dat) <- dat.labelDf$varNames.cln;
+
+### Specify the determinant structure
+detStruct <-
+   determinantStructure('highDose',
+                        list('highDose',
+                             behaviorRegEx = 'highDose'),
+                             determinantVar("intention",
+                                            "IntentionRAA",
+                                            determinantVar("attitude",
+                                                           "AttGeneral",
+                                                           subdeterminants("Likelihood",
+                                                                           "AttBeliefs"),
+                                                           subdeterminants("Evaluation",
+                                                                           "AttDesirable"),
+                                                           subdeterminantProducts("attProduct",
+                                                                                  c("AttBeliefs",
+                                                                                    "AttDesirable"))),
+                                            determinantVar("perceivedNorm",
+                                                           "NormGeneral",
+                                                           subdeterminants("Approval",
+                                                                           "NormBeliefs"),
+                                                           subdeterminants("Motivation to comply",
+                                                                           "NormMTC"),
+                                                           subdeterminantProducts("normProduct",
+                                                                                  c("NormBeliefs",
+                                                                                    "NormMTC"))),
+                                            determinantVar("pbc",
+                                                           "PBCgeneral",
+                                                           subdeterminants("Control beliefs",
+                                                                           "ContrBeliefs"))));
+
+### Process the determinant structure, eventually ordering the
+### determinant importance plots
+
+### Add variable names to the determinant structure object
+detStructAddVarNames(detStruct,
+                     names = grep("\\.\\.", names(dat), value=TRUE, invert=TRUE));
+### Compute products
+dat <- detStructComputeProducts(detStruct, dat=dat);
+### Compute scales
+dat <- detStructComputeScales(detStruct, dat);
+### Add variable labels
+detStructAddVarLabels(detStruct, dat.labelDf);
+
+### Extract variable labels and translate them
+subQuestions <- subQuestions.original <- detStruct$intention$attitude$Likelihood$subQuestions;
+leftAnchors <- leftAnchors.original <- detStruct$intention$attitude$Likelihood$leftAnchors;
+rightAnchors <- rightAnchors.original <- detStruct$intention$attitude$Likelihood$rightAnchors;
+
+translations <- matrix(c("If I use a high dose of ecstasy,\nmy trip is...", "shorter", "longer",
+                         "If I use a high dose of ecstasy,\nmy trip is...", "more mild", "more intense",
+                         "If I use a high dose of ecstasy,\nI get...", "much less\nintoxicated", "much more\nintoxicated",
+                         "A high dose of ecstasy gives me...", "much less\nenergy", "much more\nenergy",
+                         "With a high dose of ecstasy,\nthe happy, euphoric feeling is...", "much weaker", "much stronger",
+                         "If I use a high dose of ecstasy,\nI learn", "much less\nabout myself", "much more\nabout myself",
+                         "If I use a high dose of ecstasy,\n", "", "",
+                         "If I use a high dose of ecstasy,\n", "", "",
+                         "If I use a high dose of ecstasy,\n", "", "",
+                         "If I use a high dose of ecstasy,\n", "", "",
+                         "If I use a high dose of ecstasy,\n", "", "",
+                         "If I use a high dose of ecstasy,\n", "", "",
+                         "", "", "",
+                         "" "", ""), ncol=3, byrow=TRUE);
+
+leftAnchors.translated <- c();
+rightAnchors.translated <- c();
+
+“For my health, a high dose of XTC is… [much worse/much better]”
+
+“If I use a high dose of XTC, my trip is more… [mild/intense]”
+
+“My experience with using a high dose of XTC is… [worse/better]”
+
+“Do you have as much, more, or less regret after using a high dose of XTC? [much less regret / much more regret]
+
+# require(RColorBrewer);
+# require(ggplot2);
+# require(grid);
+# require(gridExtra);
+# require(gtable);
+
+### Construct determinant importance plots
+unsortedDetImp <- determinantImportance(dat, determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
+                                        targets=c(detStruct$intention$attitude$scaleVarName,
+                                                  detStruct$intention$scaleVarName),
+                                        subQuestions=subQuestions,
+                                        leftAnchors=leftAnchors,
+                                        rightAnchors=rightAnchors,
+                                        titleVarLabels=c('attitude', 'intention'));
+sortedDetImp <- determinantImportance(dat, determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
+                                      targets=c(detStruct$intention$attitude$scaleVarName,
+                                                detStruct$intention$scaleVarName),
+                                      subQuestions=detStruct$intention$attitude$Likelihood$subQuestions,
+                                      leftAnchors=detStruct$intention$attitude$Likelihood$leftAnchors,
+                                      rightAnchors=detStruct$intention$attitude$Likelihood$rightAnchors,
+                                      orderBy=detStruct$intention$attitude$scaleVarName,
+                                      titleVarLabels=c('attitude', 'intention'));
+
+### Save determinantimportance plots
+ggsave(file.path(workingPath, "determinant importance (unsorted).png"),
+     plot=unsortedDetImp,
+     width=10, height=10, dpi=100, type="cairo");
+ggsave(file.path(workingPath, "determinant importance (sorted).png"),
+     plot=sortedDetImp,
+     width=10, height=10, dpi=100, type="cairo");
+
+```
