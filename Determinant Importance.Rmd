@@ -2,28 +2,44 @@
 title: "Determinant Importance"
 author: "Rik Crutzen, Gjalt-Jorn Ygram Peters & Judith Noijen"
 date: "`r format(Sys.time(), '%Y-%m-%d at %X');`"
-output:
-  html_document:
-    toc: yes
-    toc_depth: 4
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
 
-knitr::opts_chunk$set(echo = FALSE);
+########################################################################
+### Paths
+########################################################################
 
-basePath <- 'B:/Data/research/party panel/15.1';
-dataPath <- file.path(basePath, 'data');
+### Add any relevant paths to this vector. The script will select the
+### correct path itself.
+
+basePathVector <- c('B:/Data/research',
+                    '');
+
+########################################################################
+### Set the variables with the paths
+########################################################################
+
+### Check which paths exist and set the first existing path in the list
+### as the base path
+basePath <- basePathVector[sapply(basePathVector, dir.exists)][1];
+
+### Set the additional paths
+outputPath <- file.path(basePath, 'determinant-importance');
+dataPath <- file.path(basePath, 'party panel', '15.1', 'data');
 dataFileName <- 'survey_652829_R_data_file.csv';
 dataLoadScriptName <- 'survey_652829_R_syntax_file.R';
-scriptPath <- file.path(basePath, 'results - analysis scripts');
-outputPath <- file.path(basePath, 'results - final output');
-workingPath <- file.path(basePath, 'results - intermediate output');
 
-require('userfriendlyscience');
-require('grid');
-require('data.tree');
-require('pander');
+knitr::opts_chunk$set(echo = FALSE);
+
+if (!require('userfriendlyscience')) {
+  stop("You need to have package 'userfriendlyscience' installed!");
+}
+safeRequire('ggplot2');
+safeRequire('grid');
+safeRequire('data.tree');
+safeRequire('pander');
 
 ```
 
@@ -66,25 +82,7 @@ detStruct <-
                                             determinantVar("attitude",
                                                            "AttGeneral",
                                                            subdeterminants("Likelihood",
-                                                                           "AttBeliefs"),
-                                                           subdeterminants("Evaluation",
-                                                                           "AttDesirable"),
-                                                           subdeterminantProducts("attProduct",
-                                                                                  c("AttBeliefs",
-                                                                                    "AttDesirable"))),
-                                            determinantVar("perceivedNorm",
-                                                           "NormGeneral",
-                                                           subdeterminants("Approval",
-                                                                           "NormBeliefs"),
-                                                           subdeterminants("Motivation to comply",
-                                                                           "NormMTC"),
-                                                           subdeterminantProducts("normProduct",
-                                                                                  c("NormBeliefs",
-                                                                                    "NormMTC"))),
-                                            determinantVar("pbc",
-                                                           "PBCgeneral",
-                                                           subdeterminants("Control beliefs",
-                                                                           "ContrBeliefs"))));
+                                                                           "AttBeliefs"))));
 
 ### Process the determinant structure, eventually ordering the
 ### determinant importance plots
@@ -92,73 +90,90 @@ detStruct <-
 ### Add variable names to the determinant structure object
 detStructAddVarNames(detStruct,
                      names = grep("\\.\\.", names(dat), value=TRUE, invert=TRUE));
-### Compute products
-dat <- detStructComputeProducts(detStruct, dat=dat);
 ### Compute scales
 dat <- detStructComputeScales(detStruct, dat);
 ### Add variable labels
 detStructAddVarLabels(detStruct, dat.labelDf);
 
 ### Extract variable labels and translate them
-subQuestions <- subQuestions.original <- detStruct$intention$attitude$Likelihood$subQuestions;
-leftAnchors <- leftAnchors.original <- detStruct$intention$attitude$Likelihood$leftAnchors;
-rightAnchors <- rightAnchors.original <- detStruct$intention$attitude$Likelihood$rightAnchors;
+subQuestions.original <- detStruct$intention$attitude$Likelihood$subQuestions;
+leftAnchors.original <- detStruct$intention$attitude$Likelihood$leftAnchors;
+rightAnchors.original <- detStruct$intention$attitude$Likelihood$rightAnchors;
 
-translations <- matrix(c("If I use a high dose of ecstasy,\nmy trip is...", "shorter", "longer",
-                         "If I use a high dose of ecstasy,\nmy trip is...", "more mild", "more intense",
-                         "If I use a high dose of ecstasy,\nI get...", "much less\nintoxicated", "much more\nintoxicated",
-                         "A high dose of ecstasy gives me...", "much less\nenergy", "much more\nenergy",
-                         "With a high dose of ecstasy,\nthe happy, euphoric feeling is...", "much weaker", "much stronger",
-                         "If I use a high dose of ecstasy,\nI learn", "much less\nabout myself", "much more\nabout myself",
-                         "If I use a high dose of ecstasy,\n", "", "",
-                         "If I use a high dose of ecstasy,\n", "", "",
-                         "If I use a high dose of ecstasy,\n", "", "",
-                         "If I use a high dose of ecstasy,\n", "", "",
-                         "If I use a high dose of ecstasy,\n", "", "",
-                         "If I use a high dose of ecstasy,\n", "", "",
-                         "", "", "",
-                         "" "", ""), ncol=3, byrow=TRUE);
+translations <- matrix(
+  c("If I use a high dose of ecstasy,\nmy trip is...", "shorter", "longer",
+    "If I use a high dose of ecstasy,\nmy trip is...", "more mild", "more intense",
+    "If I use a high dose of ecstasy,\nI get...", "much less\nintoxicated", "much more\nintoxicated",
+    "A high dose of ecstasy gives me...", "much less\nenergy", "much more\nenergy",
+    "With a high dose of ecstasy,\nthe happy, euphoric feeling is...", "much weaker", "much stronger",
+    "If I use a high dose of ecstasy,\nI learn...", "much less\nabout myself", "much more\nabout myself",
+    "If I use a high dose of ecstasy,\nI feel...", "much less\nconnected\n to others", "much more\nconnected\nto others",
+    "If I use a high dose of ecstasy,\nI can make contact with others...", "much harder", "much easier",
+    "If I use a high dose of ecstasy,\nI feel like having sex...", "much less", "much more",
+    "If I use a high dose of ecstasy,\nI forget my problems...", "much slower", "much faster",
+    "If I use a high dose of ecstasy,\nI feel...", "much less\nself-absorbed", "much more\nself-absorbed",
+    "With a high dose of ecstasy,\nI can test my boundaries...", "much less", "much better",
+    "If I use a high dose of ecstasy,\nthe music sounds...", "much worse", "much better",
+    "If I use a high dose of ecstasy,\nI hallucinate...", "much less", "much more",
+    "If I use a high dose of ecstasy,\nI feel time passes...", "much slower", "much faster",
+    "If I use a high dose of ecstasy,\nafterwards I remember...", "much less", "much more",
+    "For my health, using a high\ndose of ecstasy is...", "much worse", "much better",
+    "My experience with using a high\ndose of ecstasy is...", "worse", "better",
+    "Do you worry as much, more, or less\nabout the physical side effects of\nusing a high dose of ecstasy?", "worry\nmuch less", "worry\nmuch more",
+    "Do you worry as much, more, or less\nabout the emotional and psychic side\neffects of using a high dose of ecstasy?", "worry\nmuch less", "worry\nmuch more",
+    "Do you have as much, more, or less\nregret after using a high dose of ecstasy?", "much less\nregret", "much more\nregret"), ncol=3, byrow=TRUE);
 
-leftAnchors.translated <- c();
-rightAnchors.translated <- c();
+subQuestions.translated <- translations[, 1];
+leftAnchors.translated <- translations[, 2];
+rightAnchors.translated <- translations[, 3];
 
-“For my health, a high dose of XTC is… [much worse/much better]”
-
-“If I use a high dose of XTC, my trip is more… [mild/intense]”
-
-“My experience with using a high dose of XTC is… [worse/better]”
-
-“Do you have as much, more, or less regret after using a high dose of XTC? [much less regret / much more regret]
-
-# require(RColorBrewer);
-# require(ggplot2);
-# require(grid);
-# require(gridExtra);
-# require(gtable);
+subQuestions <- subQuestions.translated;
+leftAnchors <- leftAnchors.translated;
+rightAnchors <- rightAnchors.translated;
 
 ### Construct determinant importance plots
-unsortedDetImp <- determinantImportance(dat, determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
-                                        targets=c(detStruct$intention$attitude$scaleVarName,
-                                                  detStruct$intention$scaleVarName),
-                                        subQuestions=subQuestions,
-                                        leftAnchors=leftAnchors,
-                                        rightAnchors=rightAnchors,
-                                        titleVarLabels=c('attitude', 'intention'));
-sortedDetImp <- determinantImportance(dat, determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
-                                      targets=c(detStruct$intention$attitude$scaleVarName,
-                                                detStruct$intention$scaleVarName),
-                                      subQuestions=detStruct$intention$attitude$Likelihood$subQuestions,
-                                      leftAnchors=detStruct$intention$attitude$Likelihood$leftAnchors,
-                                      rightAnchors=detStruct$intention$attitude$Likelihood$rightAnchors,
-                                      orderBy=detStruct$intention$attitude$scaleVarName,
-                                      titleVarLabels=c('attitude', 'intention'));
+unsortedDetImp <-
+  determinantImportance(dat,
+                        determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
+                        targets=c(detStruct$intention$attitude$scaleVarName,
+                                  detStruct$intention$scaleVarName),
+                        subQuestions=subQuestions,
+                        leftAnchors=leftAnchors,
+                        rightAnchors=rightAnchors,
+                        titleVarLabels=c('attitude', 'intention'),
+                        drawPlot=FALSE);
+sortedDetImp <-
+  determinantImportance(dat,
+                        determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
+                        targets=c(detStruct$intention$attitude$scaleVarName,
+                                  detStruct$intention$scaleVarName),
+                        subQuestions=subQuestions,
+                        leftAnchors=leftAnchors,
+                        rightAnchors=rightAnchors,
+                        orderBy=detStruct$intention$attitude$scaleVarName,
+                        titleVarLabels=c('attitude', 'intention'),
+                        drawPlot=FALSE);
 
 ### Save determinantimportance plots
-ggsave(file.path(workingPath, "determinant importance (unsorted).png"),
+ggsave(file.path(outputPath, "determinant importance (unsorted).png"),
      plot=unsortedDetImp,
-     width=10, height=10, dpi=100, type="cairo");
-ggsave(file.path(workingPath, "determinant importance (sorted).png"),
+     width=attr(unsortedDetImp, 'width'),
+     height=attr(unsortedDetImp, 'height'),
+     dpi=300, type="cairo");
+ggsave(file.path(outputPath, "determinant importance (sorted).png"),
      plot=sortedDetImp,
-     width=10, height=10, dpi=100, type="cairo");
+     width=attr(sortedDetImp, 'width'),
+     height=attr(sortedDetImp, 'height'),
+     dpi=300, type="cairo");
 
+```
+
+```{r fig.cap="Unsorted determinant important diamond plot", fig.width=attr(unsortedDetImp, 'width'), fig.height=attr(unsortedDetImp, 'height')}
+  grid.newpage();
+  grid.draw(unsortedDetImp);
+```
+
+```{r fig.cap="Sorted determinant important diamond plot", fig.width=attr(sortedDetImp, 'width'), fig.height=attr(sortedDetImp, 'height')}
+  grid.newpage();
+  grid.draw(sortedDetImp);
 ```
