@@ -132,7 +132,7 @@ leftAnchors <- leftAnchors.translated;
 rightAnchors <- rightAnchors.translated;
 
 ### Construct determinant importance plots
-unsortedDetImp <-
+unsortedDetImpObject <-
   determinantImportance(dat,
                         determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
                         targets=c(detStruct$intention$attitude$scaleVarName,
@@ -141,7 +141,9 @@ unsortedDetImp <-
                         leftAnchors=leftAnchors,
                         rightAnchors=rightAnchors,
                         titleVarLabels=c('attitude', 'intention'),
+                        returnPlotOnly = FALSE,
                         drawPlot=FALSE);
+unsortedDetImp <- unsortedDetImpObject$output$plot;
 sortedDetImp <-
   determinantImportance(dat,
                         determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
