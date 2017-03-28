@@ -168,12 +168,12 @@ sortedCIBER <-
         drawPlot=FALSE);
 
 ### Save determinantimportance plots
-ggsave(file.path(outputPath, "determinant importance (unsorted).png"),
+ggsave(file.path(outputPath, "CIBER (unsorted).png"),
      plot=unsortedCIBER,
      width=attr(unsortedCIBER, 'width'),
      height=attr(unsortedCIBER, 'height'),
      dpi=300, type="cairo");
-ggsave(file.path(outputPath, "determinant importance (sorted).png"),
+ggsave(file.path(outputPath, "CIBER (sorted).png"),
      plot=sortedCIBER,
      width=attr(sortedCIBER, 'width'),
      height=attr(sortedCIBER, 'height'),
