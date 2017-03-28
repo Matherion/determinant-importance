@@ -1,8 +1,10 @@
 ---
-title: "Determinant Importance"
+title: "How to Select Relevant Social-Cognitive Determinants and Use them in the Development of Behaviour Change Interventions? Introducing Confidence Interval-Based Estimation of Relevance."
 author: "Rik Crutzen, Gjalt-Jorn Ygram Peters & Judith Noijen"
 date: "`r format(Sys.time(), '%Y-%m-%d at %X');`"
-output: html_document
+output:
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -41,6 +43,9 @@ safeRequire('grid');
 safeRequire('data.tree');
 safeRequire('pander');
 
+### Enable automatic figure caption numbering
+setFigCapNumbering();
+
 ```
 
 ```{r preparation}
@@ -54,6 +59,12 @@ dat <- importLimeSurveyData(datafile = file.path(dataPath, dataFileName),
                                                      'currentEducation',
                                                      'prevEducation',
                                                      'country'));
+
+### Remove one case threatening data integrity
+dat <- dat[is.na(dat$age) | dat$age < 100, ];
+
+### Set age to NA for those who did not want to provide their age
+dat$age <- ifelse(dat$age==0, NA, dat$age);
 
 ### Rename one inconsistently named variable
 names(dat)[names(dat) == 'highDose_AttBeliefs_intensity'] <- 'highDose_AttBeliefs_intens';
@@ -132,50 +143,65 @@ leftAnchors <- leftAnchors.translated;
 rightAnchors <- rightAnchors.translated;
 
 ### Construct determinant importance plots
-unsortedDetImpObject <-
-  determinantImportance(dat,
-                        determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
-                        targets=c(detStruct$intention$attitude$scaleVarName,
-                                  detStruct$intention$scaleVarName),
-                        subQuestions=subQuestions,
-                        leftAnchors=leftAnchors,
-                        rightAnchors=rightAnchors,
-                        titleVarLabels=c('attitude', 'intention'),
-                        returnPlotOnly = FALSE,
-                        drawPlot=FALSE);
-unsortedDetImp <- unsortedDetImpObject$output$plot;
-sortedDetImp <-
-  determinantImportance(dat,
-                        determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
-                        targets=c(detStruct$intention$attitude$scaleVarName,
-                                  detStruct$intention$scaleVarName),
-                        subQuestions=subQuestions,
-                        leftAnchors=leftAnchors,
-                        rightAnchors=rightAnchors,
-                        orderBy=detStruct$intention$attitude$scaleVarName,
-                        titleVarLabels=c('attitude', 'intention'),
-                        drawPlot=FALSE);
+unsortedCIBERObject <-
+  CIBER(dat,
+        determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
+        targets=c(detStruct$intention$attitude$scaleVarName,
+                  detStruct$intention$scaleVarName),
+        subQuestions=subQuestions,
+        leftAnchors=leftAnchors,
+        rightAnchors=rightAnchors,
+        titleVarLabels=c('attitude', 'intention'),
+        returnPlotOnly = FALSE,
+        drawPlot=FALSE);
+unsortedCIBER <- unsortedCIBERObject$output$plot;
+sortedCIBER <-
+  CIBER(dat,
+        determinants=unlist(detStruct$intention$attitude$Likelihood$varNames),
+        targets=c(detStruct$intention$attitude$scaleVarName,
+                  detStruct$intention$scaleVarName),
+        subQuestions=subQuestions,
+        leftAnchors=leftAnchors,
+        rightAnchors=rightAnchors,
+        orderBy=detStruct$intention$attitude$scaleVarName,
+        titleVarLabels=c('attitude', 'intention'),
+        drawPlot=FALSE);
 
 ### Save determinantimportance plots
 ggsave(file.path(outputPath, "determinant importance (unsorted).png"),
-     plot=unsortedDetImp,
-     width=attr(unsortedDetImp, 'width'),
-     height=attr(unsortedDetImp, 'height'),
+     plot=unsortedCIBER,
+     width=attr(unsortedCIBER, 'width'),
+     height=attr(unsortedCIBER, 'height'),
      dpi=300, type="cairo");
 ggsave(file.path(outputPath, "determinant importance (sorted).png"),
-     plot=sortedDetImp,
-     width=attr(sortedDetImp, 'width'),
-     height=attr(sortedDetImp, 'height'),
+     plot=sortedCIBER,
+     width=attr(sortedCIBER, 'width'),
+     height=attr(sortedCIBER, 'height'),
      dpi=300, type="cairo");
 
 ```
 
-```{r fig.cap="Unsorted determinant important diamond plot", fig.width=attr(unsortedDetImp, 'width'), fig.height=attr(unsortedDetImp, 'height')}
+```{r fig.cap="Unsorted Confidence Interval-Based Estimation of Relevance plot", fig.width=attr(unsortedCIBER, 'width'), fig.height=attr(unsortedCIBER, 'height'), results='asis'}
+  pandoc.header('Unsorted Confidence Interval-Based Estimation of Relevance plot', 2);
   grid.newpage();
-  grid.draw(unsortedDetImp);
+  grid.draw(unsortedCIBER);
 ```
 
-```{r fig.cap="Sorted determinant important diamond plot", fig.width=attr(sortedDetImp, 'width'), fig.height=attr(sortedDetImp, 'height')}
+```{r fig.cap="Sorted Confidence Interval-Based Estimation of Relevance plot", fig.width=attr(sortedCIBER, 'width'), fig.height=attr(sortedCIBER, 'height'), results='asis'}
+  pandoc.header('Sorted Confidence Interval-Based Estimation of Relevance plot', 2);
   grid.newpage();
-  grid.draw(sortedDetImp);
+  grid.draw(sortedCIBER);
+```
+
+```{r results='asis', fig.cap=c('Distribution of gender', 'Distribution of age') }
+
+  pandoc.header('Descriptives', 2);
+
+  subDat <- dat[complete.cases(dat[, c(unlist(detStruct$intention$attitude$Likelihood$varNames), detStruct$intention$attitude$scaleVarName,
+                detStruct$intention$scaleVarName)]), ];
+
+  pandoc.p(paste0("Number of participants: ", nrow(subDat)));
+
+  pander(examine(subDat$gender, subDat$age, stem=FALSE, extremeValues=FALSE));
+
 ```
