@@ -35,8 +35,3 @@ vignettes/*.pdf
 # R project stuff
 .Rproj.user
 *.Rproj
-
-### Generated files
-*.html
-*.png
-*.svg
