@@ -1,5 +1,5 @@
 ---
-title: "How to Select Relevant Social-Cognitive Determinants and Use them in the Development of Behaviour Change Interventions? Introducing Confidence Interval-Based Estimation of Relevance."
+title: "Using Confidence Interval-Based Estimation of Relevance to Select Social-Cognitive Determinants for Behaviour Change Interventions"
 author: "Rik Crutzen, Gjalt-Jorn Ygram Peters & Judith Noijen"
 date: "`r format(Sys.time(), '%Y-%m-%d at %X');`"
 output:
@@ -196,6 +196,24 @@ ggsave(file.path(outputPath, "CIBER (sorted).png"),
      width=attr(sortedCIBER, 'width'),
      height=attr(sortedCIBER, 'height'),
      dpi=300, type="cairo");
+
+ggsave(file.path(outputPath, "CIBER (sorted, 300dpi).pdf"),
+     plot=sortedCIBER,
+     width=attr(sortedCIBER, 'width'),
+     height=attr(sortedCIBER, 'height'),
+     dpi=300);
+
+ggsave(file.path(outputPath, "CIBER (sorted, 600dpi).pdf"),
+     plot=sortedCIBER,
+     width=attr(sortedCIBER, 'width'),
+     height=attr(sortedCIBER, 'height'),
+     dpi=600);
+
+ggsave(file.path(outputPath, "CIBER (sorted, 600dpi, spacier layout).pdf"),
+     plot=sortedCIBER,
+     width=attr(sortedCIBER, 'width') * 1.1,
+     height=attr(sortedCIBER, 'height') * 1.1,
+     dpi=600);
 
 ```
 
